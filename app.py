@@ -11,9 +11,13 @@ import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from rate_limit import FixedWindowRateLimiter
+
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = Path(os.getenv("MODEL_PATH", BASE_DIR / "model.pkl"))
 FEATURE_COUNT = 22
+RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "60"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 FEATURE_NAMES = [
     "transaction_amount",
     "transaction_frequency",
@@ -51,6 +55,7 @@ def load_model() -> Any:
 model = load_model()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": os.getenv("CORS_ORIGINS", "*")}})
+limiter = FixedWindowRateLimiter(RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 
 
 def error(message: str, status: int):
@@ -91,6 +96,13 @@ def model_info():
 
 @app.post("/predict")
 def predict():
+    client_key = request.remote_addr or "unknown"
+    allowed, rate_headers = limiter.check(client_key)
+    if not allowed:
+        response = jsonify({"error": "prediction rate limit exceeded", "retry_after_seconds": rate_headers["Retry-After"]})
+        response.status_code = 429
+        response.headers.update(rate_headers)
+        return response
     try:
         values = parse_features(request.get_json(silent=True))
     except ValueError as exc:
@@ -99,7 +111,7 @@ def predict():
     prediction = int(model.predict(values)[0])
     probabilities = model.predict_proba(values)[0]
     probability = {str(int(label)): round(float(score), 6) for label, score in zip(model.classes_, probabilities)}
-    return jsonify(
+    response = jsonify(
         {
             "prediction": prediction,
             "label": "fraud" if prediction == 1 else "legitimate",
@@ -107,6 +119,8 @@ def predict():
             "fraud_probability": probability.get("1", 0.0),
         }
     )
+    response.headers.update(rate_headers)
+    return response
 
 
 if __name__ == "__main__":
