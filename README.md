@@ -13,7 +13,6 @@ SafePayAI is a small, end-to-end demonstration of transaction risk scoring. It b
 - Added API tests for input validation and response shape.
 - Added a reproducible Python training entry point in `scripts/train_model.py`.
 - Added a reusable JavaScript API client in `src/api.js`.
-- Added an evidence-based development timeline from notebook metadata and Git history.
 - Documented the actual model contract instead of referring to non-existent `train.py`, `main.py`, or PostgreSQL services.
 
 ## Language statistics
@@ -23,15 +22,6 @@ The repository contains both Python and JavaScript source. GitHub is configured 
 committed CSV, pickle, image, and PDF artifacts from language percentages. This keeps
 the language panel focused on maintainable code rather than the size of generated or
 binary files.
-
-## Development provenance
-
-The notebooks contain recorded Google Colab executions beginning **December 14, 2024**.
-The repository was assembled on GitHub on **March 26, 2026**. See
-[`DEVELOPMENT_TIMELINE.md`](DEVELOPMENT_TIMELINE.md) for the timestamped notebook
-evidence, code milestones, reported validation metrics, and the distinction between
-observed facts and interpretation. Run `scripts/extract_notebook_timeline.py` to
-inspect the metadata-derived records yourself.
 
 ## Architecture
 
@@ -153,8 +143,6 @@ python scripts/train_model.py \
 | `src/` | React/Vite client |
 | `src/api.js` | Shared browser API client |
 | `scripts/train_model.py` | Reproducible preprocessing and Random Forest training |
-| `scripts/extract_notebook_timeline.py` | Extract recorded notebook execution evidence |
-| `DEVELOPMENT_TIMELINE.md` | Observed project dates and evidence-based milestones |
 | `model.pkl` | Existing trained Random Forest artifact |
 | `fraud_dataset_Generator_using_numpy.csv` | Synthetic dataset used by the notebooks |
 | `DataSetGeneratorUSingNumpy.ipynb` | Dataset generation exploration |
