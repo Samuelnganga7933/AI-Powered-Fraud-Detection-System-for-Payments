@@ -13,6 +13,7 @@ SafePayAI is a small, end-to-end demonstration of transaction risk scoring. It b
 - Added API tests for input validation and response shape.
 - Added a reproducible Python training entry point in `scripts/train_model.py`.
 - Added a reusable JavaScript API client in `src/api.js`.
+- Added configurable per-client rate limiting to `/predict`.
 - Documented the actual model contract instead of referring to non-existent `train.py`, `main.py`, or PostgreSQL services.
 
 ## Language statistics
@@ -83,6 +84,11 @@ python app.py
 
 The API listens on `http://127.0.0.1:5000` by default.
 
+Prediction requests are limited to **60 requests per client IP per 60 seconds** by
+default. Configure the window with `RATE_LIMIT_REQUESTS` and
+`RATE_LIMIT_WINDOW_SECONDS`. The API returns `429 Too Many Requests` with
+`Retry-After` and `X-RateLimit-*` headers when the limit is reached.
+
 ### 2. Start the web client
 
 In a second terminal:
@@ -139,7 +145,8 @@ python scripts/train_model.py \
 
 | Path | Purpose |
 | --- | --- |
-| `app.py` | Flask API and input validation |
+| `app.py` | Flask API, input validation, and rate-limit integration |
+| `rate_limit.py` | Thread-safe process-local fixed-window limiter |
 | `src/` | React/Vite client |
 | `src/api.js` | Shared browser API client |
 | `scripts/train_model.py` | Reproducible preprocessing and Random Forest training |
@@ -152,7 +159,7 @@ python scripts/train_model.py \
 
 ## Limitations and next steps
 
-For a production-oriented implementation, retrain from a reproducible script or pipeline, persist preprocessing with the estimator, use a safer model registry format, add authentication and rate limiting, log model/version metadata, evaluate on a time-based holdout, monitor drift and calibration, and introduce human review for high-risk decisions. Do not change the synthetic data merely to improve headline metrics; publish evaluation methodology and dataset provenance alongside any new result.
+For a production-oriented implementation, retrain from a reproducible script or pipeline, persist preprocessing with the estimator, use a safer model registry format, add authentication, move rate-limit state to a shared store such as Redis, log model/version metadata, evaluate on a time-based holdout, monitor drift and calibration, and introduce human review for high-risk decisions. Do not change the synthetic data merely to improve headline metrics; publish evaluation methodology and dataset provenance alongside any new result.
 
 ## License
 
