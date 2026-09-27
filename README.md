@@ -1,90 +1,139 @@
-# AI-Powered-Fraud-Detection-System-for-Payments
- A Modern System for fraud Detection
-AI-Powered Fraud Detection System for Payments
-Overview
+# SafePayAI — payment fraud detection demo
 
-A machine learning–based fraud detection system designed to identify suspicious financial transactions in real time. The system analyzes transaction patterns and flags high-risk activities using trained classification models. It is built with a focus on scalability, low-latency inference, and integration into payment workflows.
+SafePayAI is a small, end-to-end demonstration of transaction risk scoring. It bundles a synthetic dataset, a trained scikit-learn Random Forest model, a Flask inference API, and a React/Vite console for sending feature vectors to the API.
 
-Problem
+> **Scope:** this is a research and portfolio demo, not a production payment control. The dataset is synthetic, the model artifact is serialized with pickle, and no authentication, persistence, monitoring, or payment execution is included.
 
-Digital payment systems are vulnerable to fraudulent transactions, especially in environments with high transaction volumes and limited real-time monitoring. Traditional rule-based systems fail to adapt to evolving fraud patterns and often produce high false positives.
+## What changed in this version
 
-Solution
+- Replaced the missing Vite entrypoint with a working React client.
+- Added a validated `/predict` API that returns both a class and class probabilities.
+- Added `/health` and `/model-info` endpoints for simple operational checks.
+- Normalized the model artifact name to `model.pkl` and made its path configurable with `MODEL_PATH`.
+- Added API tests for input validation and response shape.
+- Documented the actual model contract instead of referring to non-existent `train.py`, `main.py`, or PostgreSQL services.
 
-Developed a data-driven fraud detection system that uses machine learning models to classify transactions as legitimate or fraudulent. The system processes transaction data, extracts relevant features, and performs real-time inference through an API layer.
+## Architecture
 
-Tech Stack
-Backend: Python (FastAPI / Django)
-Machine Learning: Scikit-learn, Pandas, NumPy
-Database: PostgreSQL
-Model Serving: REST API
-Data Processing: Python
-Features
-Transaction classification using trained ML models
-Real-time fraud detection via API
-Feature engineering for transaction behavior analysis
-Model evaluation and performance tracking
-Logging of flagged transactions for review
-Data
+```mermaid
+flowchart LR
+  UI[React / Vite console] -->|POST /predict| API[Flask inference API]
+  API --> MODEL[Random Forest model.pkl]
+  DATA[(Synthetic CSV)] -. training / analysis .-> MODEL
+  API --> OUT[Class + probability]
+```
 
-The system uses structured transaction data with features such as:
+The repository also includes the original system and workflow diagrams:
 
-Transaction amount
-Timestamp and frequency
-Location or IP (if available)
-User transaction history
-Device or account identifiers
-Model
-Model type: Logistic Regression / Random Forest (baseline)
-Training pipeline includes:
-Data preprocessing and normalization
-Feature selection and engineering
-Model training and validation
-Evaluation metrics:
-Precision
-Recall
-F1-score
-ROC-AUC
-Results
-Achieved strong classification performance on validation data
-Reduced false positives compared to rule-based approaches
-Demonstrated capability for real-time inference under API-based architecture
-Architecture
+![System design](SystemDesign.png)
 
-The system is structured as follows:
+![Workflow overview](WorkFlowDiagram.png)
 
-Client sends transaction data to API
-Backend processes and transforms input features
-Trained model performs inference
-System returns fraud probability and classification
-Flagged transactions are stored for further analysis
+## Dataset and model contract
 
-The architecture supports separation between training and inference environments, allowing models to be retrained and deployed independently.
+The committed CSV contains **20,000 synthetic rows**, **20 input columns**, two categorical columns, and a `Label` target with an even 10,000 / 10,000 class split. The serialized model expects **22 numeric features**: the original numeric signals plus one-hot encoded categorical values.
 
-Setup Instructions
-Clone the repository
+The order is available from `GET /model-info` and is reproduced in the frontend:
 
-Install dependencies
+1. Transaction amount
+2. Transaction frequency
+3. Recipient blacklist status
+4. Device fingerprinting
+5. VPN or proxy usage
+6. Behavioral biometrics
+7. Time since last transaction
+8. Social trust score
+9. Account age
+10. High-risk transaction times
+11. Past fraudulent behavior flags
+12. Location-inconsistent transactions
+13. Normalized transaction amount
+14. Transaction context anomalies
+15. Fraud complaints count
+16. Merchant category mismatch
+17. User daily limit exceeded
+18. Recent high-value transaction flags
+19. Recipient verification status: suspicious
+20. Recipient verification status: verified
+21. Geo-location flag: normal
+22. Geo-location flag: unusual
 
+The current artifact was created with scikit-learn 1.5.2. The pinned dependency is intentional because loading serialized scikit-learn estimators across versions can be unsafe or incompatible. Only load model files from a trusted source.
+
+## Run locally
+
+### 1. Start the API
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-Prepare dataset (place in /data directory)
+python app.py
+```
 
-Train the model
+The API listens on `http://127.0.0.1:5000` by default.
 
-python train.py
+### 2. Start the web client
 
-Start API server
+In a second terminal:
 
-uvicorn main:app --reload
-Send test requests to API endpoint
-Future Improvements
-Integration with streaming systems (Kafka) for real-time pipelines
-Use of deep learning models for improved detection accuracy
-Deployment with Docker and cloud infrastructure
-Continuous model retraining with new transaction data
-Notes
+```bash
+npm install
+npm run dev
+```
 
-This project focuses on combining backend engineering with machine learning to simulate a real-world fraud detection pipeline suitable for fintech systems.
+If the API runs somewhere else, set the Vite variable before starting the client:
 
-/api
-/train
+```bash
+VITE_API_URL=http://localhost:5000 npm run dev
+```
+
+### 3. Try the API directly
+
+```bash
+curl http://localhost:5000/health
+curl http://localhost:5000/model-info
+curl -X POST http://localhost:5000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"features":[0.007772,0.461538,0,0,0,0.119084,0.794263,0.172174,0.786936,0,0,0,0.414003,0.186907,0,0,0,0,0,1,1,0]}'
+```
+
+Example response shape:
+
+```json
+{
+  "prediction": 0,
+  "label": "legitimate",
+  "probability": {"0": 0.83, "1": 0.17},
+  "fraud_probability": 0.17
+}
+```
+
+## Development checks
+
+```bash
+npm run lint
+npm run build
+pytest -q
+```
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `app.py` | Flask API and input validation |
+| `src/` | React/Vite client |
+| `model.pkl` | Existing trained Random Forest artifact |
+| `fraud_dataset_Generator_using_numpy.csv` | Synthetic dataset used by the notebooks |
+| `DataSetGeneratorUSingNumpy.ipynb` | Dataset generation exploration |
+| `FraudDetectionUSingGAN.ipynb` | Preprocessing and modeling exploration |
+| `tests/` | API regression tests |
+| `SystemDesign.png`, `WorkFlowDiagram.png` | Existing design visuals |
+
+## Limitations and next steps
+
+For a production-oriented implementation, retrain from a reproducible script or pipeline, persist preprocessing with the estimator, use a safer model registry format, add authentication and rate limiting, log model/version metadata, evaluate on a time-based holdout, monitor drift and calibration, and introduce human review for high-risk decisions. Do not change the synthetic data merely to improve headline metrics; publish evaluation methodology and dataset provenance alongside any new result.
+
+## License
+
+See [LICENSE](LICENSE).
