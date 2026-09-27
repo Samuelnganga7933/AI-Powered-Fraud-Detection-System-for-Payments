@@ -1,0 +1,6 @@
+# GitHub language statistics should represent maintainable source, not binary/data payloads.
+*.ipynb linguist-language=Python
+*.csv linguist-detectable=false
+*.pkl linguist-detectable=false
+*.png linguist-detectable=false
+*.pdf linguist-detectable=false

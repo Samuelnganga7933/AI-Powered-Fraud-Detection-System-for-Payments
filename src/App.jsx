@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+import { predictTransaction } from "./api";
 const featureNames = [
   "Transaction amount", "Transaction frequency", "Recipient blacklist status", "Device fingerprinting",
   "VPN or proxy usage", "Behavioral biometrics", "Time since last transaction", "Social trust score",
@@ -29,16 +28,9 @@ export default function App() {
     setResult(null);
     setError("");
     try {
-      const response = await fetch(`${API_URL}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ features: values.map(Number) }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Prediction failed");
-      setResult(data);
+      setResult(await predictTransaction(values));
     } catch (requestError) {
-      setError(`${requestError.message}. Is the Flask API running at ${API_URL}?`);
+      setError(`${requestError.message}. Is the Flask API running?`);
     } finally {
       setLoading(false);
     }

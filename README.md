@@ -11,7 +11,17 @@ SafePayAI is a small, end-to-end demonstration of transaction risk scoring. It b
 - Added `/health` and `/model-info` endpoints for simple operational checks.
 - Normalized the model artifact name to `model.pkl` and made its path configurable with `MODEL_PATH`.
 - Added API tests for input validation and response shape.
+- Added a reproducible Python training entry point in `scripts/train_model.py`.
+- Added a reusable JavaScript API client in `src/api.js`.
 - Documented the actual model contract instead of referring to non-existent `train.py`, `main.py`, or PostgreSQL services.
+
+## Language statistics
+
+The repository contains both Python and JavaScript source. GitHub is configured through
+`.gitattributes` to count the Jupyter notebooks as Python source while excluding the
+committed CSV, pickle, image, and PDF artifacts from language percentages. This keeps
+the language panel focused on maintainable code rather than the size of generated or
+binary files.
 
 ## Architecture
 
@@ -117,12 +127,22 @@ npm run build
 pytest -q
 ```
 
+To retrain a separate joblib pipeline from the committed synthetic data:
+
+```bash
+python scripts/train_model.py \
+  --data fraud_dataset_Generator_using_numpy.csv \
+  --output artifacts/fraud_model.joblib
+```
+
 ## Repository map
 
 | Path | Purpose |
 | --- | --- |
 | `app.py` | Flask API and input validation |
 | `src/` | React/Vite client |
+| `src/api.js` | Shared browser API client |
+| `scripts/train_model.py` | Reproducible preprocessing and Random Forest training |
 | `model.pkl` | Existing trained Random Forest artifact |
 | `fraud_dataset_Generator_using_numpy.csv` | Synthetic dataset used by the notebooks |
 | `DataSetGeneratorUSingNumpy.ipynb` | Dataset generation exploration |
