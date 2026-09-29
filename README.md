@@ -1,95 +1,25 @@
-# SafePayAI — payment fraud detection demo
+# SafePayAI
 
-SafePayAI is a small, end-to-end demonstration of transaction risk scoring. It bundles a synthetic dataset, a trained scikit-learn Random Forest model, a Flask inference API, and a React/Vite console for sending feature vectors to the API.
+A small, end-to-end experiment in making payment risk easier to see.
 
-> **Scope:** this is a research and portfolio demo, not a production payment control. The dataset is synthetic, the model artifact is serialized with pickle, and no authentication, persistence, monitoring, or payment execution is included.
+SafePayAI takes a transaction, scores its risk, and returns something a human can actually inspect. The project pairs a synthetic dataset and Random Forest model with a Flask API and a React console.
 
-## What changed in this version
+## The interesting bit
 
-- Replaced the missing Vite entrypoint with a working React client.
-- Added a validated `/predict` API that returns both a class and class probabilities.
-- Added `/health` and `/model-info` endpoints for simple operational checks.
-- Normalized the model artifact name to `model.pkl` and made its path configurable with `MODEL_PATH`.
-- Added API tests for input validation and response shape.
-- Added a reproducible Python training entry point in `scripts/train_model.py`.
-- Added a reusable JavaScript API client in `src/api.js`.
-- Added configurable per-client rate limiting to `/predict`.
-- Documented the actual model contract instead of referring to non-existent `train.py`, `main.py`, or PostgreSQL services.
+This is not presented as a production payment control. It is a study in the line between a model and a usable product: input contracts, probability output, health checks, API tests, and rate limiting all matter as much as the prediction itself.
 
-## Language statistics
+## Stack
 
-The repository contains both Python and JavaScript source. GitHub is configured through
-`.gitattributes` to count the Jupyter notebooks as Python source while excluding the
-committed CSV, pickle, image, and PDF artifacts from language percentages. This keeps
-the language panel focused on maintainable code rather than the size of generated or
-binary files.
+`Python` `scikit-learn` `Flask` `React` `Vite` `pytest`
 
-## Architecture
-
-```mermaid
-flowchart LR
-  UI[React / Vite console] -->|POST /predict| API[Flask inference API]
-  API --> MODEL[Random Forest model.pkl]
-  DATA[(Synthetic CSV)] -. training / analysis .-> MODEL
-  API --> OUT[Class + probability]
-```
-
-The repository also includes the original system and workflow diagrams:
-
-![System design](SystemDesign.png)
-
-![Workflow overview](WorkFlowDiagram.png)
-
-## Dataset and model contract
-
-The committed CSV contains **20,000 synthetic rows**, **20 input columns**, two categorical columns, and a `Label` target with an even 10,000 / 10,000 class split. The serialized model expects **22 numeric features**: the original numeric signals plus one-hot encoded categorical values.
-
-The order is available from `GET /model-info` and is reproduced in the frontend:
-
-1. Transaction amount
-2. Transaction frequency
-3. Recipient blacklist status
-4. Device fingerprinting
-5. VPN or proxy usage
-6. Behavioral biometrics
-7. Time since last transaction
-8. Social trust score
-9. Account age
-10. High-risk transaction times
-11. Past fraudulent behavior flags
-12. Location-inconsistent transactions
-13. Normalized transaction amount
-14. Transaction context anomalies
-15. Fraud complaints count
-16. Merchant category mismatch
-17. User daily limit exceeded
-18. Recent high-value transaction flags
-19. Recipient verification status: suspicious
-20. Recipient verification status: verified
-21. Geo-location flag: normal
-22. Geo-location flag: unusual
-
-The current artifact was created with scikit-learn 1.5.2. The pinned dependency is intentional because loading serialized scikit-learn estimators across versions can be unsafe or incompatible. Only load model files from a trusted source.
-
-## Run locally
-
-### 1. Start the API
+## Start here
 
 ```bash
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
-
-The API listens on `http://127.0.0.1:5000` by default.
-
-Prediction requests are limited to **60 requests per client IP per 60 seconds** by
-default. Configure the window with `RATE_LIMIT_REQUESTS` and
-`RATE_LIMIT_WINDOW_SECONDS`. The API returns `429 Too Many Requests` with
-`Retry-After` and `X-RateLimit-*` headers when the limit is reached.
-
-### 2. Start the web client
 
 In a second terminal:
 
@@ -98,69 +28,22 @@ npm install
 npm run dev
 ```
 
-If the API runs somewhere else, set the Vite variable before starting the client:
+## What is included
 
-```bash
-VITE_API_URL=http://localhost:5000 npm run dev
-```
+- `/predict` for transaction-risk scoring
+- `/health` and `/model-info` for simple operational checks
+- A reproducible training script
+- Input validation and API tests
+- Configurable request rate limiting
+- A synthetic dataset and explicit model limitations
 
-### 3. Try the API directly
+## Preview
 
-```bash
-curl http://localhost:5000/health
-curl http://localhost:5000/model-info
-curl -X POST http://localhost:5000/predict \
-  -H 'Content-Type: application/json' \
-  -d '{"features":[0.007772,0.461538,0,0,0,0.119084,0.794263,0.172174,0.786936,0,0,0,0.414003,0.186907,0,0,0,0,0,1,1,0]}'
-```
+![SafePayAI system design](./assets/SystemDesign.png)
 
-Example response shape:
+*System design included with the project.*
+## Next
 
-```json
-{
-  "prediction": 0,
-  "label": "legitimate",
-  "probability": {"0": 0.83, "1": 0.17},
-  "fraud_probability": 0.17
-}
-```
+The next useful step is not a bigger model. It is better evaluation: calibrated thresholds, explainable decisions, drift checks, and a clearer review path for uncertain transactions.
 
-## Development checks
-
-```bash
-npm run lint
-npm run build
-pytest -q
-```
-
-To retrain a separate joblib pipeline from the committed synthetic data:
-
-```bash
-python scripts/train_model.py \
-  --data fraud_dataset_Generator_using_numpy.csv \
-  --output artifacts/fraud_model.joblib
-```
-
-## Repository map
-
-| Path | Purpose |
-| --- | --- |
-| `app.py` | Flask API, input validation, and rate-limit integration |
-| `rate_limit.py` | Thread-safe process-local fixed-window limiter |
-| `src/` | React/Vite client |
-| `src/api.js` | Shared browser API client |
-| `scripts/train_model.py` | Reproducible preprocessing and Random Forest training |
-| `model.pkl` | Existing trained Random Forest artifact |
-| `fraud_dataset_Generator_using_numpy.csv` | Synthetic dataset used by the notebooks |
-| `DataSetGeneratorUSingNumpy.ipynb` | Dataset generation exploration |
-| `FraudDetectionUSingGAN.ipynb` | Preprocessing and modeling exploration |
-| `tests/` | API regression tests |
-| `SystemDesign.png`, `WorkFlowDiagram.png` | Existing design visuals |
-
-## Limitations and next steps
-
-For a production-oriented implementation, retrain from a reproducible script or pipeline, persist preprocessing with the estimator, use a safer model registry format, add authentication, move rate-limit state to a shared store such as Redis, log model/version metadata, evaluate on a time-based holdout, monitor drift and calibration, and introduce human review for high-risk decisions. Do not change the synthetic data merely to improve headline metrics; publish evaluation methodology and dataset provenance alongside any new result.
-
-## License
-
-See [LICENSE](LICENSE).
+[Open the code](https://github.com/Samuelnganga7933/AI-Powered-Fraud-Detection-System-for-Payments)
